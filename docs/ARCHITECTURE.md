@@ -1,30 +1,56 @@
 # Architecture and Engineering Notes
 
-## Data flow
+## End-to-end data flow
 
 ```mermaid
 flowchart TD
-    A[AdventureWorks CSV files in GitHub] --> B[Azure Data Factory]
-    B --> C[Bronze - ADLS Gen2]
-    C --> D[PySpark Silver notebook]
-    D --> E[Silver - Parquet on ADLS Gen2]
-    E --> F[Serverless SQL OPENROWSET views]
-    F --> G[Gold schema and SQL analytics]
-    G --> H[BI / reporting layer - optional extension]
+    A["AdventureWorks CSV files<br/>GitHub / archive"] --> B["Azure Data Factory"]
+    B --> C["Bronze<br/>ADLS Gen2 raw landing"]
+    C --> D["PySpark Silver notebook"]
+    D --> E["Silver<br/>Parquet datasets"]
+    E --> F["Synapse serverless SQL<br/>OPENROWSET"]
+    F --> G["Gold schema and views"]
+    G --> H["Analytics / BI<br/>optional extension"]
 ```
+
+## Components
+
+| Component | Current implementation | Configuration to verify |
+|---|---|---|
+| Source | AdventureWorks CSV files in `archive/` and HTTP source definitions | Source URLs and file availability |
+| Ingestion | `GitToRaw` and `DynamicGitToRaw` ADF pipelines | Dataset parameters, metadata JSON, target paths |
+| Bronze | ADLS Gen2 landing folders | Container names and ADF/Spark permissions |
+| Silver | `Silver_layer.ipynb` with PySpark transformations | Storage account, folder paths, schema assumptions |
+| Gold | SQL schema, `OPENROWSET` views, external-table example | SQL endpoint, storage URL, credential and permissions |
+| Quality | `notebooks/data_quality_checks.py` | Confirmed business keys and required columns |
 
 ## Ingestion patterns
 
-- **Static copy:** the `GitToRaw` pipeline copies a configured HTTP CSV source into Bronze.
-- **Metadata-driven copy:** `DynamicGitToRaw` reads file metadata with Lookup, iterates with ForEach, and passes source and sink parameters to datasets.
+- **Static copy:** `GitToRaw` uses an HTTP source and a configured sink dataset to copy a CSV input into the lake.
+- **Metadata-driven copy:** `DynamicGitToRaw` uses Lookup to read metadata, then ForEach to pass each source URL and destination details into parameterized datasets.
+- The metadata dataset points to a JSON file named `git.json` in the configured `parameter` file system. Ensure that file exists and conforms to the dataset schema before running the dynamic pipeline.
 
 ## Transformation layer
 
-The Silver notebook reads CSV datasets from Bronze, applies column-level transformations, and writes Parquet files. Review the notebook's append behavior before reruns: repeated executions can add duplicate records unless the target is cleared or the load is made idempotent.
+The Silver notebook reads the Bronze CSV entities, applies transformations, and writes Parquet outputs. Examples include calendar month/year derivation, customer full-name construction, product field preparation, and sales data preparation.
+
+**Rerun behavior:** the notebook currently uses append writes. Repeated execution may duplicate rows. Use a controlled overwrite for full refreshes or implement an incremental process with a validated key/watermark before scheduling repeated runs.
+
+## Gold SQL layer
+
+The SQL assets demonstrate:
+
+1. Creating the `gold` schema.
+2. Creating views over Silver Parquet folders with `OPENROWSET`.
+3. Creating a managed-identity database-scoped credential and external data sources.
+4. Defining a Parquet external file format and an example external table.
+
+The storage URLs and database/workspace names are environment-specific. Confirm the serverless SQL feature set and authentication requirements in the target workspace before deployment.
 
 ## Data quality gate
 
 The helper in `notebooks/data_quality_checks.py` provides:
+
 - Required-column and key-column existence checks
 - Null counts for configured required/key columns
 - Duplicate counts for configured business keys
@@ -34,8 +60,9 @@ Configure real business keys from the source schema; do not treat guessed keys a
 
 ## Incremental-load design recommendation
 
-The current notebook uses append writes. A production-ready extension should:
-1. Identify a reliable watermark (for example, a source update timestamp) or a deterministic business key.
+A production-ready extension should:
+
+1. Identify a reliable watermark (for example, a source update timestamp) or deterministic business key.
 2. Persist the last successful watermark in a control/audit table.
 3. Read only new or changed source records.
 4. Deduplicate the incoming batch using the confirmed business key.
@@ -43,4 +70,13 @@ The current notebook uses append writes. A production-ready extension should:
 6. Record run ID, start/end time, source and target row counts, watermark, and status.
 7. Make retries safe so a rerun does not duplicate data.
 
-The available source files and notebook do not establish a trustworthy change-tracking column for every entity. Therefore this repository documents the incremental pattern rather than pretending a complete CDC implementation is already configured.
+The supplied source files and notebook do not establish a trustworthy change-tracking column for every entity. Therefore, incremental processing is a design recommendation, not a claim that CDC is already implemented.
+
+## Deployment and security checklist
+
+- Replace sample storage account, workspace, database, and folder values.
+- Configure managed identity on the deployed services and grant least-privilege access.
+- Keep secrets out of source control; use a secure secret store when a secret is unavoidable.
+- Verify the SQL identity can read the relevant lake paths.
+- Review Git history if credentials were ever committed. Removing a credential from the latest revision does not remove it from older commits.
+- Test each pipeline and SQL script in a non-production environment before scheduling workloads.
