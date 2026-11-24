@@ -156,3 +156,14 @@ Sample Gold-layer SQL queries are available in [sqlscript/Sample Analytics Queri
 ## Disclaimer
 
 This is a learning and portfolio project built with the AdventureWorks sample dataset. Azure resource names, paths, permissions, and execution steps must be adapted to the target environment.
+
+## Maintainer
+
+Maintained by [Subhashree Mohapatra](https://github.com/subhashre-m). If you find an issue or have a suggestion, feel free to open a GitHub issue.
+
+## Clone the Repository
+
+```bash
+git clone https://github.com/subhashre-m/AdventureWorkLoad_Project.git
+cd AdventureWorkLoad_Project
+```
