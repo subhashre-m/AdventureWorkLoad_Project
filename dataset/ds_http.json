@@ -10,7 +10,7 @@
 		"typeProperties": {
 			"location": {
 				"type": "HttpServerLocation",
-				"relativeUrl": "/nishu2423/AdventureWorkLoad_Project/refs/heads/main/archive/AdventureWorks_Products.csv"
+				"relativeUrl": "/subhashre-m/AdventureWorkLoad_Project/refs/heads/main/archive/AdventureWorks_Products.csv"
 			},
 			"columnDelimiter": ",",
 			"escapeChar": "\\",
