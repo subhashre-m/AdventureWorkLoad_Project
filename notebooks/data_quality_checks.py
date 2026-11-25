@@ -98,3 +98,21 @@ def print_quality_report(results: Iterable[Dict[str, object]]) -> None:
 #
 # Do not leave placeholder key names in a production run. Confirm the actual
 # business key from the source data model before enabling uniqueness checks.
+
+
+def assert_quality_passed(results: Iterable[Dict[str, object]]) -> None:
+    """Raise an exception when any table-level quality check fails."""
+    failures = [
+        result for result in results
+        if result.get("status") != "PASSED"
+    ]
+    if failures:
+        details = "; ".join(
+            f"{item.get('table', '<unknown>')}: "
+            f"missing_required={item.get('missing_required_columns', [])}, "
+            f"missing_keys={item.get('missing_key_columns', [])}, "
+            f"nulls={item.get('null_counts', {})}, "
+            f"duplicate_keys={item.get('duplicate_key_count')}"
+            for item in failures
+        )
+        raise ValueError(f"Data-quality gate failed: {details}")

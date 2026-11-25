@@ -34,7 +34,7 @@ flowchart TD
 
 The Silver notebook reads the Bronze CSV entities, applies transformations, and writes Parquet outputs. Examples include calendar month/year derivation, customer full-name construction, product field preparation, and sales data preparation.
 
-**Rerun behavior:** the notebook currently uses append writes. Repeated execution may duplicate rows. Use a controlled overwrite for full refreshes or implement an incremental process with a validated key/watermark before scheduling repeated runs.
+**Rerun behavior:** the notebook now exposes a `silver_write_mode` widget and defaults to `overwrite`, making full-refresh runs repeatable without accumulating prior output. Overwrite replaces each target folder, so select `append` only for deliberately non-overlapping batches. This is not incremental/CDC processing.
 
 ## Gold SQL layer
 
@@ -57,6 +57,10 @@ The helper in `notebooks/data_quality_checks.py` provides:
 - A simple pass/fail result per dataset
 
 Configure real business keys from the source schema; do not treat guessed keys as authoritative.
+
+## Quality-gate usage
+
+After running the configured checks, call `assert_quality_passed(results)` before publishing or querying the Silver outputs. The helper raises `ValueError` with failed-table details if any check fails. Business keys and required columns still need to be confirmed for each dataset.
 
 ## Incremental-load design recommendation
 
