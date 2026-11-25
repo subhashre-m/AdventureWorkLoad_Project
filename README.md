@@ -134,11 +134,11 @@ result = run_table_checks(
 print_quality_report([result])
 ```
 
-Replace the placeholder with a key confirmed from the source model; do not assume a business key without validating it.
+Replace the placeholder with a key confirmed from the source model; do not assume a business key without validating it. Call `assert_quality_passed([result])` after collecting checks to stop downstream processing when a check fails.
 
 ## Important engineering notes
 
-- **Idempotency:** the current Silver notebook uses append writes. Re-running it can duplicate data. Clear/replace the target deliberately or implement a validated incremental/merge strategy before repeated production runs.
+- **Silver reruns:** the notebook now defaults to `overwrite` for full-refresh idempotency. Each run replaces the corresponding Silver output path. Choose the `append` widget option only for intentionally non-overlapping batches; it can reintroduce duplicates.
 - **Environment coupling:** resource names and storage paths are examples from one Azure setup, not portable defaults.
 - **Dynamic ingestion:** the metadata-driven pipeline expects a JSON metadata file in the configured parameter location. Populate it with valid relative source URLs, target folders, and file names.
 - **Security:** the storage linked service is configured for system-assigned managed identity. Ensure the identity exists in the deployed service and has appropriate access. Review old Git history if any credential was previously committed; changing the latest file does not erase historical exposure.
@@ -147,7 +147,8 @@ Replace the placeholder with a key confirmed from the source model; do not assum
 ## Roadmap
 
 - [ ] Parameterize environment-specific resource names and paths.
-- [ ] Make Silver processing idempotent and add incremental-load support.
+- [x] Make Silver full-refresh writes idempotent by default (overwrite mode); append is an explicit opt-in.
+- [ ] Add validated incremental-load support after confirming source watermarks/business keys.
 - [ ] Add pipeline-level logging, failure handling, and run audit records.
 - [ ] Add schema-drift and referential-integrity checks.
 - [ ] Add a Gold reporting layer or Power BI dashboard.
