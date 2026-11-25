@@ -159,7 +159,9 @@ This project uses the AdventureWorks sample dataset for learning and demonstrati
 
 ## Maintainer
 
-Repository maintained through [@subhashre-m](https://github.com/subhashre-m). Contributions, bug reports, and suggestions are welcome via GitHub Issues.
+**Subhashree** · [@subhashre-m](https://github.com/subhashre-m)
+
+Contributions, bug reports, and suggestions are welcome via GitHub Issues.
 
 ## Useful links
 
